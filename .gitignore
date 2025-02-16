@@ -1,8 +1,6 @@
 .venv
 .env
 __pycache__
-*.db
-*.db.wal
-test.json
-sp500_tickers.json
-*.ipynb
+.ruff_cache
+test*.json
+.DS_Store

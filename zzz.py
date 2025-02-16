@@ -2,8 +2,8 @@ import hashlib
 from datetime import datetime
 
 
-def generate_id(title, url):
-    return hashlib.sha256(f"{title}{url}".encode()).hexdigest()
+def generate_id(str1, str2):
+    return hashlib.sha256(f"{str1}{str2}".encode()).hexdigest()
 
 
 def convert_timestamp(timestamp_str: str) -> str:
