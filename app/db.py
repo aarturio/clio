@@ -4,7 +4,7 @@ import json
 
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from zzz import generate_id, convert_timestamp
+from .zzz import generate_id, convert_timestamp
 
 load_dotenv()
 
@@ -46,7 +46,7 @@ class DBOps(BaseModel):
 
         batch = []
 
-        with open("test1.json", "r") as file:
+        with open("mock_data/test1.json", "r") as file:
             data = json.load(file)
 
         for item in data["feed"]:
@@ -60,7 +60,7 @@ class DBOps(BaseModel):
             )
             batch.append(new_entry.model_dump())
 
-        with open("test2.json", "r") as file:
+        with open("mock_data/test2.json", "r") as file:
             data = json.load(file)
 
         for item in data["feed"]:
@@ -74,7 +74,7 @@ class DBOps(BaseModel):
             )
             batch.append(new_entry.model_dump())
 
-        with open("test3.json", "r") as file:
+        with open("mock_data/test3.json", "r") as file:
             data = json.load(file)
 
         for item in data["feed"]:

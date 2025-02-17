@@ -2,7 +2,7 @@ import logging
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from db import DBManager, DBOps
+from .db import DBManager, DBOps
 from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO)
