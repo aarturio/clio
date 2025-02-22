@@ -2,5 +2,6 @@
 .env
 __pycache__
 .ruff_cache
-test*.json
+mock_data
 .DS_Store
+.vscode
