@@ -13,19 +13,20 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    # Connect to CouchDB
     conn = CouchDBConnector(
-        os.getenv("URL"), os.getenv("USERNAME"), os.getenv("PASSWORD")
+        os.getenv("COUCHDB_URL"),
+        os.getenv("COUCHDB_USERNAME"),
+        os.getenv("COUCHDB_PASSWORD"),
     )
-    db = conn.database("news_db")
+    db_name = os.getenv("COUCHDB_DB_NAME")
+    db = conn.database(db_name)
     app.state.db = db
 
-    # Create the database (optional)
-    conn.create_database("news_db")
+    conn.create_database(db_name)
     try:
-        yield  # App runs during this block
+        yield
     finally:
-        conn.delete_database("news_db")
+        conn.delete_database(db_name)
 
 
 app = FastAPI(lifespan=lifespan)
@@ -40,11 +41,11 @@ def get_news(ticker: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/ingest/")
-def ingest_data():
+@app.get("/ingest/{ticker}")
+def ingest_data(ticker: str):
 
     try:
-        DBOps.ingest_news(db=app.state.db)
+        DBOps.ingest_news(db=app.state.db, ticker=ticker)
 
         return {"message": "Data ingestion completed successfully"}
 

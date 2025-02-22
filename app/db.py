@@ -42,12 +42,6 @@ class CouchDBDatabase:
         self.connector = connector
         self.db_url = f"{connector.url}/{db_name}"
 
-    def save_doc(self, doc: Dict[str, Any]) -> Dict[str, Any]:
-        """Save a single document."""
-        response = self.connector.session.put(f"{self.db_url}/{doc['_id']}", json=doc)
-        response.raise_for_status()
-        return response.json()
-
     def bulk_docs(self, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Bulk insert/update documents."""
         payload = {"docs": docs}
@@ -57,79 +51,55 @@ class CouchDBDatabase:
         response.raise_for_status()
         return response.json()
 
-    def get_doc(self, doc_id: str) -> Dict[str, Any]:
-        """Retrieve a document by ID."""
-        response = self.connector.session.get(f"{self.db_url}/{doc_id}")
-        response.raise_for_status()
-        return response.json()
-
 
 class NewsEntity(BaseModel):
-    id: str = Field(..., alias="_id")
-    ticker: str
+    hash: str = Field(..., alias="_id")
+    root_ticker: str
+    id: str
+    publisher: Dict[str, str]
     title: str
-    url: str
-    body: str
-    published_at: str
+    author: str
+    published_utc: str
+    article_url: str
+    tickers: List[str]
+    image_url: str
+    description: str
+    keywords: List[str]
+    insights: List[Dict[str, str]]
 
     class Config:
-        populate_by_name = True  # Allows instantiation with _id or id
+        populate_by_name = True
 
 
 class DBOps(BaseModel):
 
     @staticmethod
-    def ingest_news(db: CouchDBDatabase):
+    def ingest_news(db: CouchDBDatabase, ticker: str):
 
-        # replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
-        # API_KEY = os.getenv("API_KEY")
-        # url = f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={ticker}&apikey={API_KEY}&limit=1000"
-        # r = requests.get(url)
-        # data = r.json()
+        API_KEY = os.getenv("POLYGON_API_KEY")
+        url = f"https://api.polygon.io/v2/reference/news?ticker={ticker}&order=desc&limit=1000&sort=published_utc&apiKey={API_KEY}"
+        r = requests.get(url)
+        data = r.json()
 
         batch = []
 
-        with open("mock_data/test1.json", "r") as file:
-            data = json.load(file)
-
-        for item in data["feed"]:
+        for item in data["results"]:
             doc = NewsEntity(
-                id=generate_id(item["title"], item["url"]),
-                ticker="NVDA",
+                hash=generate_id(item["title"], item["article_url"]),
+                root_ticker=ticker,
+                id=item["id"],
+                publisher=item["publisher"],
                 title=item["title"],
-                url=item["url"],
-                body=item["summary"],
-                published_at=convert_timestamp(item["time_published"]),
+                author=item["author"],
+                published_utc=item["published_utc"],
+                article_url=item["article_url"],
+                tickers=item["tickers"],
+                image_url=item["image_url"],
+                description=item["description"],
+                keywords=item["keywords"],
+                insights=item["insights"],
             )
             batch.append(doc.model_dump(by_alias=True))
-
-        # with open("mock_data/test2.json", "r") as file:
-        #     data = json.load(file)
-
-        # for item in data["feed"]:
-        #     new_entry = NewsEntity(
-        #         id=generate_id(item["title"], item["url"]),
-        #         ticker="TSLA",
-        #         title=item["title"],
-        #         url=item["url"],
-        #         body=item["summary"],
-        #         published_at=convert_timestamp(item["time_published"]),
-        #     )
-        #     batch.append(new_entry.model_dump())
-
-        # with open("mock_data/test3.json", "r") as file:
-        #     data = json.load(file)
-
-        # for item in data["feed"]:
-        #     new_entry = NewsEntity(
-        #         id=generate_id(item["title"], item["url"]),
-        #         ticker="AAPL",
-        #         title=item["title"],
-        #         url=item["url"],
-        #         body=item["summary"],
-        #         published_at=convert_timestamp(item["time_published"]),
-        #     )
-        #     batch.append(new_entry.model_dump())
 
         db.bulk_docs(batch)
 
