@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 def generate_id(str1, str2):
-    return hashlib.sha256(f"{str1}{str2}".encode()).hexdigest()
+    return hashlib.md5(f"{str1}{str2}".encode()).hexdigest()
 
 
 def convert_timestamp(timestamp_str: str) -> str:
