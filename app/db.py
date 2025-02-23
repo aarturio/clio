@@ -1,9 +1,8 @@
 import os
-import json
 
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-from .zzz import generate_id, convert_timestamp
+from .zzz import generate_id
 
 load_dotenv()
 
@@ -48,6 +47,12 @@ class CouchDBDatabase:
         response = self.connector.session.post(
             f"{self.db_url}/_bulk_docs", json=payload
         )
+        response.raise_for_status()
+        return response.json()
+
+    def get_docs(self, query) -> List[Dict[str, Any]]:
+        """Get documents based on a query."""
+        response = self.connector.session.post(f"{self.db_url}/_find", json=query)
         response.raise_for_status()
         return response.json()
 
@@ -105,6 +110,13 @@ class DBOps(BaseModel):
 
     @staticmethod
     def get_news(db: CouchDBDatabase, ticker: str):
-        output = [db.get(x) for x in db if db.get(x)["ticker"] == ticker]
+
+        query = {
+            "selector": {
+                "root_ticker": ticker,
+            },
+            "limit": 1000,
+        }
+        output = db.get_docs(query)
 
         return output

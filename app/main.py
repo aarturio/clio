@@ -26,17 +26,18 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        conn.delete_database(db_name)
+        # conn.delete_database(db_name)
+        pass
 
 
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/ticker/{ticker}")
-def get_news(ticker: str):
+@app.post("/ticker/{ticker}")
+def get_data(ticker: str):
     try:
         output = DBOps.get_news(db=app.state.db, ticker=ticker)
-        return output
+        return {"message": "News fetched successfully", "data": output}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
