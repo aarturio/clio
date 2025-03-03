@@ -2,12 +2,11 @@ import os
 
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-from .zzz import generate_id
+from zzz import generate_id
 
 load_dotenv()
 
 import requests
-import json
 from typing import List, Dict, Any
 
 
@@ -33,6 +32,11 @@ class CouchDBConnector:
         """Delete a database."""
         response = self.session.delete(f"{self.url}/{db_name}")
         return response.status_code == 200
+
+    def users_database(self) -> bool:
+        """Ensure the _users database exists."""
+        response = self.session.put(f"{self.url}/_users")
+        return response.status_code in (201, 202, 412)  # 412 means it already exists
 
 
 class CouchDBDatabase:
