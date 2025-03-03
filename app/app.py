@@ -3,7 +3,7 @@ import os
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from .db import DBOps, CouchDBConnector
+from db import DBOps, CouchDBConnector
 from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO)
@@ -15,13 +15,14 @@ async def lifespan(app: FastAPI):
 
     conn = CouchDBConnector(
         os.getenv("COUCHDB_URL"),
-        os.getenv("COUCHDB_USERNAME"),
+        os.getenv("COUCHDB_USER"),
         os.getenv("COUCHDB_PASSWORD"),
     )
     db_name = os.getenv("COUCHDB_DB_NAME")
     db = conn.database(db_name)
     app.state.db = db
 
+    conn.users_database()
     conn.create_database(db_name)
     try:
         yield
@@ -31,6 +32,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the Clio API"}
 
 
 @app.post("/ticker/{ticker}")

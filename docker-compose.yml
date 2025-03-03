@@ -1,0 +1,36 @@
+version: "3.8"
+services:
+  clio:
+    entrypoint:
+      [
+        "/app/.venv/bin/fastapi",
+        "run",
+        "app/app.py",
+        "--port",
+        "8000",
+        "--host",
+        "0.0.0.0",
+      ]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - couchdb
+    environment:
+      - COUCHDB_URL=http://couchdb:5984
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=password
+      - COUCHDB_DB_NAME=financial_news
+  couchdb:
+    image: couchdb:latest
+    ports:
+      - "5984:5984"
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=password
+    volumes:
+      - couchdb-data:/opt/couchdb/data
+volumes:
+  couchdb-data:
