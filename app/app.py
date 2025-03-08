@@ -39,7 +39,7 @@ def read_root():
     return {"message": "Welcome to the Clio API"}
 
 
-@app.post("/ticker/{ticker}")
+@app.get("/ticker/{ticker}")
 def get_data(ticker: str):
     try:
         output = DBOps.get_news(db=app.state.db, ticker=ticker)
@@ -48,11 +48,11 @@ def get_data(ticker: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/ingest/{ticker}")
-def ingest_data(ticker: str):
+@app.get("/ingest/")
+def ingest_data():
 
     try:
-        DBOps.ingest_news(db=app.state.db, ticker=ticker)
+        DBOps.ingest_news(db=app.state.db)
 
         return {"message": "Data ingestion completed successfully"}
 
