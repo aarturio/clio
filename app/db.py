@@ -83,9 +83,12 @@ class NewsEntity(BaseModel):
 class DBOps(BaseModel):
 
     @staticmethod
-    def ingest_news(db: CouchDBDatabase, ticker: str):
+    def ingest_news(db: CouchDBDatabase):
 
         API_KEY = os.getenv("POLYGON_API_KEY")
+
+        ticker = "TSLA"
+
         url = f"https://api.polygon.io/v2/reference/news?ticker={ticker}&order=desc&limit=1000&sort=published_utc&apiKey={API_KEY}"
         r = requests.get(url)
         data = r.json()
@@ -119,7 +122,7 @@ class DBOps(BaseModel):
             "selector": {
                 "root_ticker": ticker,
             },
-            "limit": 1000,
+            # "limit": 1000,
         }
         output = db.get_docs(query)
 

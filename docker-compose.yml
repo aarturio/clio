@@ -14,14 +14,52 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: clio:latest
+    container_name: clio
     ports:
       - "8000:8000"
+    environment:
+      PORT: 8000
+    depends_on:
+      - couchdb
+    env_file:
+      - .env
+
+  clio-debug:
+    entrypoint:
+      [
+        "/app/.venv/bin/python",
+        "-m",
+        "debugpy",
+        "--listen",
+        "0.0.0.0:5678",
+        "--wait-for-client",
+        "-m",
+        "uvicorn",
+        "app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: clio:latest
+    container_name: clio-debug
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    environment:
+      PORT: 8000
     depends_on:
       - couchdb
     env_file:
       - .env
   couchdb:
     image: couchdb:latest
+    container_name: couchdb
     ports:
       - "5984:5984"
     env_file:
