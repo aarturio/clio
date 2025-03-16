@@ -43,7 +43,7 @@ def read_root():
 @app.get("/ticker/{ticker}")
 def get_data(ticker: str):
     try:
-        output = DBOps.get_data(db=app.state.db, ticker=ticker)
+        output = DBOps.get_agg_data(db=app.state.db, ticker=ticker)
         return {"message": "Data fetched successfully", "data": output}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -53,7 +53,7 @@ def get_data(ticker: str):
 def ingest_data():
 
     try:
-        DBOps.ingest_data(db=app.state.db)
+        DBOps.ingest_news_data(db=app.state.db)
 
         return {"message": "Data ingestion completed successfully"}
 
