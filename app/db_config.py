@@ -1,8 +1,5 @@
-import os
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from dotenv import load_dotenv
-from zzz import generate_id
 
 load_dotenv()
 
@@ -60,70 +57,14 @@ class CouchDBDatabase:
         response.raise_for_status()
         return response.json()
 
-
-class NewsEntity(BaseModel):
-    hash: str = Field(..., alias="_id")
-    root_ticker: str
-    id: str
-    publisher: Dict[str, str]
-    title: str
-    author: str
-    published_utc: str
-    article_url: str
-    tickers: List[str]
-    image_url: str
-    description: str
-    keywords: List[str]
-    insights: List[Dict[str, str]]
-
-    class Config:
-        populate_by_name = True
-
-
-class DBOps(BaseModel):
-
-    @staticmethod
-    def ingest_news(db: CouchDBDatabase):
-
-        API_KEY = os.getenv("POLYGON_API_KEY")
-
-        ticker = "TSLA"
-
-        url = f"https://api.polygon.io/v2/reference/news?ticker={ticker}&order=desc&limit=1000&sort=published_utc&apiKey={API_KEY}"
-        r = requests.get(url)
-        data = r.json()
-
-        batch = []
-
-        for item in data["results"]:
-            doc = NewsEntity(
-                hash=generate_id(item["title"], item["article_url"]),
-                root_ticker=ticker,
-                id=item["id"],
-                publisher=item["publisher"],
-                title=item["title"],
-                author=item["author"],
-                published_utc=item["published_utc"],
-                article_url=item["article_url"],
-                tickers=item["tickers"],
-                image_url=item["image_url"],
-                description=item["description"],
-                keywords=item["keywords"],
-                insights=item["insights"],
-            )
-            batch.append(doc.model_dump(by_alias=True))
-
-        db.bulk_docs(batch)
-
-    @staticmethod
-    def get_news(db: CouchDBDatabase, ticker: str):
-
+    def add_index(self, column) -> bool:
+        """Create an index."""
         query = {
-            "selector": {
-                "root_ticker": ticker,
+            "index": {
+                "fields": [column],
             },
-            # "limit": 1000,
+            "name": f"{column}-index",
+            "type": "json",
         }
-        output = db.get_docs(query)
-
-        return output
+        response = self.connector.session.post(f"{self.db_url}/_index", json=query)
+        return response.status_code in (201, 202)
