@@ -3,18 +3,19 @@ import os
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from zzz import generate_id
+from datetime import datetime
 
 load_dotenv()
 
 import requests
-from news_entity import NewsEntity
+from entity import DataEntity, PriceEntity
 from db_config import CouchDBDatabase
 
 
 class DBOps(BaseModel):
 
     @staticmethod
-    def ingest_data(db: CouchDBDatabase):
+    def ingest_news_data(db: CouchDBDatabase):
 
         API_KEY = os.getenv("POLYGON_API_KEY")
 
@@ -27,7 +28,7 @@ class DBOps(BaseModel):
         batch = []
 
         for item in data["results"]:
-            doc = NewsEntity(
+            doc = DataEntity(
                 hash=generate_id(item["title"], item["article_url"]),
                 root_ticker=ticker,
                 id=item["id"],
@@ -50,7 +51,20 @@ class DBOps(BaseModel):
         db.bulk_docs(batch)
 
     @staticmethod
-    def get_data(db: CouchDBDatabase, ticker: str):
+    def get_price_data(start_date: str, end_date: str):
+
+        API_KEY = os.getenv("POLYGON_API_KEY")
+
+        ticker = "TSLA"
+
+        url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start_date}/{end_date}?adjusted=true&sort=asc&limit=120&apiKey={API_KEY}"
+        r = requests.get(url)
+        data = r.json()
+
+        return data
+
+    @staticmethod
+    def get_agg_data(db: CouchDBDatabase, ticker: str):
 
         query = {
             "selector": {
@@ -59,6 +73,14 @@ class DBOps(BaseModel):
             "limit": 50,
             "sort": [{"published_utc": "desc"}],
         }
-        output = db.get_docs(query)
+        news_data = db.get_docs(query)
 
-        return output
+        start_date = news_data["docs"][-1]["published_utc"]
+        end_date = news_data["docs"][0]["published_utc"]
+
+        start_date_str = datetime.fromisoformat(start_date).date().isoformat()
+        end_date_str = datetime.fromisoformat(end_date).date().isoformat()
+
+        price_data = DBOps.get_price_data(start_date_str, end_date_str)
+
+        return {"price_data": price_data, "news_data": news_data}
