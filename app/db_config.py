@@ -1,4 +1,3 @@
-from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -7,7 +6,7 @@ import requests
 from typing import List, Dict, Any
 
 
-class CouchDBConnector:
+class DBManager:
     def __init__(self, url: str, username: str = None, password: str = None):
         """Initialize with CouchDB server URL and optional credentials."""
         self.url = url.rstrip("/")
@@ -16,9 +15,9 @@ class CouchDBConnector:
         if self.auth:
             self.session.auth = self.auth
 
-    def database(self, db_name: str) -> "CouchDBDatabase":
+    def database(self, db_name: str) -> "DBOperations":
         """Return a database object for the given database name."""
-        return CouchDBDatabase(self, db_name)
+        return DBOperations(self, db_name)
 
     def create_database(self, db_name: str) -> bool:
         """Create a database if it doesn’t exist."""
@@ -36,8 +35,8 @@ class CouchDBConnector:
         return response.status_code in (201, 202, 412)  # 412 means it already exists
 
 
-class CouchDBDatabase:
-    def __init__(self, connector: CouchDBConnector, db_name: str):
+class DBOperations:
+    def __init__(self, connector: DBManager, db_name: str):
         """Initialize with a connector and database name."""
         self.connector = connector
         self.db_url = f"{connector.url}/{db_name}"

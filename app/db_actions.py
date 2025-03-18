@@ -8,20 +8,16 @@ from datetime import datetime
 load_dotenv()
 
 import requests
-from entity import DataEntity, PriceEntity
-from db_config import CouchDBDatabase
+from entity import DataEntity
+from db_config import DBOperations
 
 
-class DBOps(BaseModel):
+class Actions:
 
     @staticmethod
-    def ingest_news_data(db: CouchDBDatabase):
+    def ingest_news_data(db: DBOperations, api_key: str, ticker: str):
 
-        API_KEY = os.getenv("POLYGON_API_KEY")
-
-        ticker = "TSLA"
-
-        url = f"https://api.polygon.io/v2/reference/news?ticker={ticker}&order=desc&limit=1000&sort=published_utc&apiKey={API_KEY}"
+        url = f"https://api.polygon.io/v2/reference/news?ticker={ticker}&order=desc&limit=1000&sort=published_utc&apiKey={api_key}"
         r = requests.get(url)
         data = r.json()
 
@@ -51,20 +47,16 @@ class DBOps(BaseModel):
         db.bulk_docs(batch)
 
     @staticmethod
-    def get_price_data(start_date: str, end_date: str):
+    def get_price_data(api_key: str, ticker: str, start_date: str, end_date: str):
 
-        API_KEY = os.getenv("POLYGON_API_KEY")
-
-        ticker = "TSLA"
-
-        url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start_date}/{end_date}?adjusted=true&sort=asc&limit=120&apiKey={API_KEY}"
+        url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start_date}/{end_date}?adjusted=true&sort=asc&limit=120&apiKey={api_key}"
         r = requests.get(url)
         data = r.json()
 
         return data
 
     @staticmethod
-    def get_agg_data(db: CouchDBDatabase, ticker: str):
+    def get_agg_data(db: DBOperations, api_key: str, ticker: str):
 
         query = {
             "selector": {
@@ -81,6 +73,8 @@ class DBOps(BaseModel):
         start_date_str = datetime.fromisoformat(start_date).date().isoformat()
         end_date_str = datetime.fromisoformat(end_date).date().isoformat()
 
-        price_data = DBOps.get_price_data(start_date_str, end_date_str)
+        price_data = Actions.get_price_data(
+            api_key, ticker, start_date_str, end_date_str
+        )
 
         return {"price_data": price_data, "news_data": news_data}
