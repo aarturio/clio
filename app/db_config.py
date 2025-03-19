@@ -1,7 +1,3 @@
-from dotenv import load_dotenv
-
-load_dotenv()
-
 import requests
 from typing import List, Dict, Any
 

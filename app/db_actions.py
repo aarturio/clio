@@ -1,21 +1,14 @@
-import os
-
-from pydantic import BaseModel
-from dotenv import load_dotenv
 from zzz import generate_id
 from datetime import datetime
-
-load_dotenv()
-
 import requests
-from entity import DataEntity
+from entity import DataEntity, PriceEntity
 from db_config import DBOperations
 
 
 class Actions:
 
     @staticmethod
-    def ingest_news_data(db: DBOperations, api_key: str, ticker: str):
+    def ingest_sentiment_data(db: DBOperations, api_key: str, ticker: str):
 
         url = f"https://api.polygon.io/v2/reference/news?ticker={ticker}&order=desc&limit=1000&sort=published_utc&apiKey={api_key}"
         r = requests.get(url)
@@ -47,34 +40,67 @@ class Actions:
         db.bulk_docs(batch)
 
     @staticmethod
-    def get_price_data(api_key: str, ticker: str, start_date: str, end_date: str):
+    def ingest_price_data(
+        db: DBOperations, api_key: str, ticker: str, start_date: str, end_date: str
+    ):
 
-        url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start_date}/{end_date}?adjusted=true&sort=asc&limit=120&apiKey={api_key}"
+        url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start_date}/{end_date}?adjusted=true&sort=desc&limit=50000&apiKey={api_key}"
         r = requests.get(url)
         data = r.json()
 
-        return data
+        batch = []
+
+        for item in data["results"]:
+            doc = PriceEntity(
+                id=generate_id(item["t"], ticker),
+                root_ticker=ticker,
+                open=item["o"],
+                close=item["c"],
+                high=item["h"],
+                low=item["l"],
+                volume=item["v"],
+                num_trades=item["n"],
+                timestamp=item["t"],
+                date=datetime.fromtimestamp(item["t"] / 1000).strftime("%Y-%m-%d"),
+            )
+            batch.append(doc.model_dump(by_alias=True))
+
+        db.add_index("root_ticker")
+        db.add_index("date")
+
+        db.bulk_docs(batch)
 
     @staticmethod
-    def get_agg_data(db: DBOperations, api_key: str, ticker: str):
+    def get_data(
+        sentiment_db: DBOperations, price_db: DBOperations, api_key: str, ticker: str
+    ):
 
         query = {
             "selector": {
                 "root_ticker": ticker,
             },
-            "limit": 50,
+            "limit": 1000,
             "sort": [{"published_utc": "desc"}],
         }
-        news_data = db.get_docs(query)
+        sentiment_data = sentiment_db.get_docs(query)
 
-        start_date = news_data["docs"][-1]["published_utc"]
-        end_date = news_data["docs"][0]["published_utc"]
+        query = {
+            "selector": {
+                "root_ticker": ticker,
+            },
+            "sort": [{"date": "desc"}],
+        }
 
-        start_date_str = datetime.fromisoformat(start_date).date().isoformat()
-        end_date_str = datetime.fromisoformat(end_date).date().isoformat()
+        price_data = price_db.get_docs(query)
 
-        price_data = Actions.get_price_data(
-            api_key, ticker, start_date_str, end_date_str
-        )
+        # start_date = sentiment_data["docs"][-1]["published_utc"]
+        # end_date = sentiment_data["docs"][0]["published_utc"]
 
-        return {"price_data": price_data, "news_data": news_data}
+        # start_date_str = datetime.fromisoformat(start_date).date().isoformat()
+        # end_date_str = datetime.fromisoformat(end_date).date().isoformat()
+
+        # price_data = Actions.get_price_data(
+        #     api_key, ticker, start_date_str, end_date_str
+        # )
+
+        return {"sentiment_data": sentiment_data, "price_data": price_data}

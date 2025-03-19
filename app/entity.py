@@ -1,7 +1,4 @@
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
-
-load_dotenv()
 
 from typing import List, Dict
 
@@ -26,15 +23,16 @@ class DataEntity(BaseModel):
 
 
 class PriceEntity(BaseModel):
-    hash: str = Field(..., alias="_id")
+    id: str = Field(..., alias="_id")
     root_ticker: str
-    id: str
-    date: str
     open: float
     close: float
     high: float
     low: float
     volume: int
+    num_trades: int
+    timestamp: int
+    date: str
 
     class Config:
         populate_by_name = True

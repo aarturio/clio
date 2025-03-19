@@ -1,7 +1,6 @@
 import logging
 import os
-
-from dotenv import load_dotenv
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import APIKeyHeader
 from db_actions import Actions
@@ -29,12 +28,21 @@ async def lifespan(app: FastAPI):
         os.getenv("COUCHDB_USER"),
         os.getenv("COUCHDB_PASSWORD"),
     )
-    db_name = os.getenv("COUCHDB_DB_NAME")
-    db = conn.database(db_name)
-    app.state.db = db
+
+    TS_DB_NAME = os.getenv("COUCHDB_TS_DB_NAME")
+    TP_DB_NAME = os.getenv("COUCHDB_TP_DB_NAME")
 
     conn.users_database()
-    conn.create_database(db_name)
+
+    conn.create_database(TS_DB_NAME)
+    conn.create_database(TP_DB_NAME)
+
+    ts_db = conn.database(TS_DB_NAME)
+    tp_db = conn.database(TP_DB_NAME)
+
+    app.state.ts_db = ts_db
+    app.state.tp_db = tp_db
+
     try:
         yield
     finally:
@@ -66,8 +74,11 @@ def read_root():
 @app.get("/ticker/{ticker}", dependencies=[Depends(verify_api_key)])
 def get_data(ticker: str, config: APIConfig = Depends(get_api_config)):
     try:
-        output = Actions.get_agg_data(
-            db=app.state.db, api_key=config.polygon_api_key, ticker=ticker
+        output = Actions.get_data(
+            sentiment_db=app.state.ts_db,
+            price_db=app.state.tp_db,
+            api_key=config.polygon_api_key,
+            ticker=ticker,
         )
         return {"message": "Data fetched successfully", "data": output}
     except Exception as e:
@@ -78,8 +89,15 @@ def get_data(ticker: str, config: APIConfig = Depends(get_api_config)):
 def ingest_data(ticker: str, config: APIConfig = Depends(get_api_config)):
 
     try:
-        Actions.ingest_news_data(
-            db=app.state.db, api_key=config.polygon_api_key, ticker=ticker
+        Actions.ingest_sentiment_data(
+            db=app.state.ts_db, api_key=config.polygon_api_key, ticker=ticker
+        )
+        Actions.ingest_price_data(
+            db=app.state.tp_db,
+            api_key=config.polygon_api_key,
+            ticker=ticker,
+            start_date="2024-01-01",
+            end_date=datetime.now().strftime("%Y-%m-%d"),
         )
 
         return {"message": "Data ingestion completed successfully"}
