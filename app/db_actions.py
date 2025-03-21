@@ -88,19 +88,10 @@ class Actions:
             "selector": {
                 "root_ticker": ticker,
             },
+            "limit": 1000,
             "sort": [{"date": "desc"}],
         }
 
         price_data = price_db.get_docs(query)
-
-        # start_date = sentiment_data["docs"][-1]["published_utc"]
-        # end_date = sentiment_data["docs"][0]["published_utc"]
-
-        # start_date_str = datetime.fromisoformat(start_date).date().isoformat()
-        # end_date_str = datetime.fromisoformat(end_date).date().isoformat()
-
-        # price_data = Actions.get_price_data(
-        #     api_key, ticker, start_date_str, end_date_str
-        # )
 
         return {"sentiment_data": sentiment_data, "price_data": price_data}
