@@ -1,5 +1,5 @@
-from zzz import generate_id
-from datetime import datetime
+from zzz import generate_id, format_query
+from datetime import datetime, timedelta
 import requests
 from entity import DataEntity, PriceEntity
 from db_config import DBOperations
@@ -75,23 +75,21 @@ class Actions:
         sentiment_db: DBOperations, price_db: DBOperations, api_key: str, ticker: str
     ):
 
-        query = {
-            "selector": {
-                "root_ticker": ticker,
-            },
-            "limit": 1000,
-            "sort": [{"published_utc": "desc"}],
-        }
-        sentiment_data = sentiment_db.get_docs(query)
-
-        query = {
-            "selector": {
-                "root_ticker": ticker,
-            },
-            "limit": 1000,
-            "sort": [{"date": "desc"}],
+        timeframes = {
+            "30d": (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
+            "60d": (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d"),
+            "90d": (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
         }
 
-        price_data = price_db.get_docs(query)
+        data = {}
 
-        return {"sentiment_data": sentiment_data, "price_data": price_data}
+        for timeframe, days in timeframes.items():
+            data[f"sd{timeframe}"] = sentiment_db.get_docs(
+                format_query(ticker, "published_utc", days)
+            )
+
+            data[f"pd{timeframe}"] = price_db.get_docs(
+                format_query(ticker, "date", days)
+            )
+
+        return data

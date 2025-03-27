@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import APIKeyHeader
 from db_actions import Actions
@@ -96,7 +96,7 @@ def ingest_data(ticker: str, config: APIConfig = Depends(get_api_config)):
             db=app.state.tp_db,
             api_key=config.polygon_api_key,
             ticker=ticker,
-            start_date="2024-01-01",
+            start_date=(datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
             end_date=datetime.now().strftime("%Y-%m-%d"),
         )
 
